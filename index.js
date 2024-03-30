@@ -624,8 +624,14 @@ async function run() {
         {
           $project: {
             _id: 0,
-            Success: { $arrayElemAt: ["$Success.count", 0] },
-            Pending: { $arrayElemAt: ["$Pending.count", 0] },
+            Success: {
+              $ifNull: [{ $arrayElemAt: ["$Success.count", 0] }, 0]
+            },
+            Pending: {
+              $ifNull: [{ $arrayElemAt: ["$Pending.count", 0] }, 0]
+            },
+            // Success: { $arrayElemAt: ["$Success.count", 0] },
+            // Pending: { $arrayElemAt: ["$Pending.count", 0] },
           },
         },
       ]).toArray();
@@ -635,6 +641,54 @@ async function run() {
       res.send({deliveryStatus, totalOrders});
     })
 
+    // current user
+    app.get("/currentUserInfo/:email", async(req,res)=>{
+      const email=req.params.email;
+
+      const query={userEmail: email};
+
+      const result= await userCollection.findOne(query);
+      res.send(result);
+    })
+
+    // admin check
+
+    app.get("/currentUserAdmin/:email", async(req,res)=>{
+      const email= req.params.email;
+
+      const query={userEmail: email};
+
+      let isAdmin=false;
+
+      const exist= await userCollection.findOne(query);
+
+      if(exist){
+        isAdmin=exist?.role=="Admin"
+      }
+
+      res.send({isAdmin});
+    })
+    
+
+    //profile update
+
+    app.patch("/upDatingMyProfileData/:email",async(req,res)=>{
+      const profileData = req.body;
+      const email= req.params.email;
+
+      console.log(profileData);
+      const query={
+        userEmail: email
+      }
+
+      const updateDoc={
+        $set: {
+          userName: profileData.name
+        }
+      }
+      const result= await userCollection.updateOne(query, updateDoc);
+      res.send(result);
+    })
 
     await client.connect();
     // Send a ping to confirm a successful connection
